@@ -55,3 +55,7 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# 发布 / 打包产物（见 .github/workflows/build.yml）
+/dist/
+/publish/

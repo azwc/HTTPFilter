@@ -1,0 +1,187 @@
+# HTTPFilter · 自动构建
+#
+# 触发方式：
+#   * push 到 main、向 main 提 PR  → 编译 + 打包 + 上传 Actions 构建产物
+#   * 推送 v* 标签（如 v1.0.0）    → 额外创建 / 更新 GitHub Release 并附上 zip
+#   * 在 Actions 页面手动运行      → 同上，产物仅保留在 Actions 中
+#
+# 说明：项目是 WPF（net6.0-windows），因此必须在 windows-latest 上构建。
+#
+# 解决方案含两个项目：HTTPFilter（WPF 主程序）、Listener_Core（代理核心类库，
+# 由主程序通过 ProjectReference 引用）。restore / build 都针对 .sln 执行，
+# 所以 Listener_Core 一定会被编译；publish 时它随引用自动进入输出。
+#
+# 产物（解压后运行 exe 即可，程序需要管理员权限）：
+#   HTTPFilter-<版本>-win-x64-self-contained.zip       自包含发布，目标机无需安装 .NET
+#   HTTPFilter-<版本>-win-x64-framework-dependent.zip  体积小，但需要 .NET 6 Desktop Runtime
+#
+# 关于版本号：csproj 里 GenerateAssemblyInfo=false，而 AssemblyInfo.cs 是 T4 预处理类
+# （TransformText 只生成字符串，不会在编译期产生程序集属性），所以 exe 里的版本仍然是
+# 默认值。这里用标签名 / 提交 SHA 作为压缩包与 Release 的标识，并在压缩包里附 version.txt。
+# 若希望 exe 的版本信息跟随标签，可改用 csproj 的 <Version> / <AssemblyVersion>。
+#
+# 完整发版步骤、校验方式与故障排查见仓库根目录的 RELEASING.md。
+
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# 默认只读；发布 Release 需要 contents: write，见 build 任务的 permissions
+permissions:
+  contents: read
+
+# 同一分支 / PR 推新提交时，取消尚未完成的旧构建
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+
+jobs:
+  build:
+    name: Build (win-x64)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 .NET 6 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          # 如需完全可复现的构建，可改成具体补丁版本，例如 '6.0.428'
+          dotnet-version: '6.0.x'
+
+      - name: 打印 SDK 信息
+        run: dotnet --info
+
+      - name: 缓存 NuGet 包
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: 计算版本号
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            # v1.2.3 -> 1.2.3
+            $version  = $env:GITHUB_REF_NAME -replace '^[vV]', ''
+            $artifact = "HTTPFilter-${version}-win-x64"
+          } else {
+            $short    = $env:GITHUB_SHA.Substring(0, 7)
+            $version  = "0.0.0-dev.$($env:GITHUB_RUN_NUMBER)-${short}"
+            $artifact = "HTTPFilter-dev-${short}-win-x64"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "artifact=$artifact" >> $env:GITHUB_OUTPUT
+          Write-Host "version  : $version"
+          Write-Host "artifact : $artifact"
+
+      - name: 还原依赖（解决方案：HTTPFilter + Listener_Core）
+        run: dotnet restore HTTPFilter.sln
+
+      - name: 编译（Release，两个项目）
+        run: dotnet build HTTPFilter.sln -c Release --no-restore
+
+      # 发布只指定主程序：Listener_Core 由 ProjectReference 自动参与编译，
+      # 单文件发布时被打进 exe，普通发布时以 Listener_Core.dll 出现在输出目录。
+      - name: 发布 · 自包含（win-x64）
+        run: >
+          dotnet publish HTTPFilter/HTTPFilter.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:DebugType=none
+          -p:DebugSymbols=false
+          -o publish/self-contained
+
+      - name: 发布 · 依赖运行时（win-x64）
+        run: >
+          dotnet publish HTTPFilter/HTTPFilter.csproj
+          -c Release
+          -r win-x64
+          --self-contained false
+          -p:DebugType=none
+          -p:DebugSymbols=false
+          -o publish/framework-dependent
+
+      - name: 打包
+        shell: pwsh
+        env:
+          ARTIFACT: ${{ steps.version.outputs.artifact }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $artifact = $env:ARTIFACT
+          $version  = $env:VERSION
+
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          foreach ($dir in @('publish/self-contained', 'publish/framework-dependent')) {
+            # 附一个 version.txt，方便使用者确认拿到的是哪个构建
+            Set-Content -LiteralPath (Join-Path $dir 'version.txt') -Value $version -NoNewline
+          }
+
+          Compress-Archive -Path 'publish/self-contained/*' `
+                           -DestinationPath "dist/${artifact}-self-contained.zip" `
+                           -CompressionLevel Optimal
+          Compress-Archive -Path 'publish/framework-dependent/*' `
+                           -DestinationPath "dist/${artifact}-framework-dependent.zip" `
+                           -CompressionLevel Optimal
+
+          Get-ChildItem -LiteralPath dist |
+            Select-Object Name, @{ Name = 'SizeMB'; Expression = { [math]::Round($_.Length / 1MB, 1) } } |
+            Format-Table -AutoSize
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.artifact }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: 创建 / 更新 Release
+        if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag   = $env:GITHUB_REF_NAME
+          $files = @(Get-ChildItem -LiteralPath dist -Filter *.zip | ForEach-Object FullName)
+
+          # 标签里带 -（如 v1.0.0-beta.1）时标为预发布
+          $extra = @()
+          if ($tag -match '-') { $extra += '--prerelease' }
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag 已存在，覆盖上传资产"
+            gh release upload $tag $files --clobber
+          }
+          else {
+            Write-Host "创建 Release $tag"
+            gh release create $tag $files --title $tag --generate-notes --verify-tag @extra
+          }
+          if ($LASTEXITCODE -ne 0) { throw "发布 Release 失败（gh 退出码 ${LASTEXITCODE}）" }
