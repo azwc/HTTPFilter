@@ -69,7 +69,7 @@ namespace Listener_Core
 
         public async Task OnRequest(object sender, SessionEventArgs e)
         {
-            if (e.HttpClient.Request.Url.Contains("/api/getGachaLog"))
+            if (e.HttpClient.Request.Url.Contains("/api/getGachaLog") || e.HttpClient.Request.Url.Contains("getLdGachaLog"))
             {
                 icb.OnGetUrl(e.HttpClient.Request.Url);
             }
