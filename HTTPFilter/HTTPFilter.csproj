@@ -1,0 +1,53 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net6.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <UseWPF>true</UseWPF>
+        <IsPackable>false</IsPackable>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <Authors>周树人</Authors>
+        <Company>周树人</Company>
+        <ApplicationIcon>http(s)-2.ico</ApplicationIcon>
+        <PackageIcon>http(s)-2.ico</PackageIcon>
+    </PropertyGroup>
+    <PropertyGroup>
+        <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+<!--        <Version>1.0.0</Version>-->
+<!--        <AssemblyVersion>1.0.1</AssemblyVersion>-->
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <Deterministic>false</Deterministic>
+        <AssemblyName>抽卡链接提取器$(AssemblyVersion)</AssemblyName>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DebugType>embedded</DebugType>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DebugType>embedded</DebugType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Listener_Core\Listener_Core.csproj">
+            <!--            <ExcludeFromSingleFile>true</ExcludeFromSingleFile>-->
+        </ProjectReference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="AssemblyInfo.tt">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>AssemblyInfo.cs</LastGenOutput>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="AssemblyInfo.cs">
+        <AutoGen>True</AutoGen>
+        <DesignTime>True</DesignTime>
+        <DependentUpon>AssemblyInfo.tt</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
+</Project>

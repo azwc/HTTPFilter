@@ -1,0 +1,26 @@
+﻿<Window x:Class="HTTPFilter.UsageWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:HTTPFilter"
+        mc:Ignorable="d"
+        Title="Usage" Height="300" Width="400"
+        ResizeMode="NoResize" WindowStyle="None" WindowStartupLocation="CenterOwner" Background="Transparent" BorderThickness="1" BorderBrush="#222">
+    <Grid Background="White">
+        <StackPanel Orientation="Vertical">
+            <StackPanel Height="250">
+                <TextBlock Padding="10" TextWrapping="Wrap">
+                    使用前须知：本工具在捕获链接期间，会代理系统网络，如果您的游戏依赖其它代理软件(非游戏加速器)，建议先断开代理。如果是国际服，打不开抽卡页面，可以使用您自己的代理软件，先打开抽卡历史页面，然后断开代理，再使用本工具。<LineBreak/><LineBreak/>
+                    1、点击“捕获链接”。<LineBreak/><LineBreak/>
+                    2、打开抽卡页面。<LineBreak/><LineBreak/>
+                    3、选择抽卡历史选项卡，显示抽卡列表。（可视情况翻页一到两次。）<LineBreak/><LineBreak/>
+                    4、获取成功/失败。<LineBreak/><LineBreak/>
+                </TextBlock>
+            </StackPanel>
+            <StackPanel Height="50" Orientation="Vertical" VerticalAlignment="Center">
+                <Button Command="{Binding Close}" Width="100" Height="30" VerticalAlignment="Center" Margin="10">关闭</Button>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

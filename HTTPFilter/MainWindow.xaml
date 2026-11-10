@@ -1,0 +1,56 @@
+﻿<Window x:Class="HTTPFilter.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModel="clr-namespace:HTTPFilter.ViewModel"
+        mc:Ignorable="d"
+        Title="抽卡链接提取器" Height="300" Width="800"
+        ResizeMode="NoResize"
+        Background="Transparent"
+        WindowStyle="None"
+        WindowStartupLocation="CenterScreen"
+        BorderThickness="1" BorderBrush="#222"
+        >
+    
+    <!-- <Window.DataContext> -->
+    <!--     <viewModel:MainWindowViewModel /> -->
+    <!-- </Window.DataContext> -->
+    <Window.Resources>
+        <Style x:Key="baseButtonStyle" TargetType="Button">
+            <Setter Property="Margin" Value="0 10 0 10"></Setter>
+            <Setter Property="BorderThickness" Value="0"></Setter>
+            <Setter Property="Width" Value="100"></Setter>
+            <Setter Property="Height" Value="30"></Setter>
+        </Style>
+        
+        <Style x:Key="buttonStyle" TargetType="Button" BasedOn="{StaticResource baseButtonStyle}">
+            <Setter Property="Margin" Value="10 10  0 10"></Setter>
+        </Style>
+    </Window.Resources>
+    <Grid Background="White">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Button Command="{Binding Start}" IsEnabled="{Binding StartIsEnabled}" Style="{StaticResource buttonStyle}">捕获链接</Button>
+                <Button Command="{Binding Stop}" IsEnabled="{Binding StopIsEnabled}" Style="{StaticResource buttonStyle}">停止</Button>
+                <StackPanel Height="30" Width="400" Margin="10 0 0 0" Orientation="Horizontal" VerticalAlignment="Center" MouseDown="UIElement_OnMouseDown">
+                    <TextBlock VerticalAlignment="Center" Block.TextAlignment="Center" Text="抽卡链接提取器" FontSize="20"></TextBlock>
+                    <TextBlock Margin="20 0 0 0" VerticalAlignment="Center" Text="本工具不保证一定有效，请知悉！" Foreground="Brown"></TextBlock>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource baseButtonStyle}" Command="{Binding ShowUsage}">使用方法</Button>
+                    <Button Style="{StaticResource baseButtonStyle}" Margin="26 0 0 0" Width="30" Command="{Binding CloseWindow}">x</Button>
+                </StackPanel>
+                
+            </StackPanel>
+            <StackPanel Margin="10 0 10 0" MaxHeight="240">
+                <TextBox Name="UrlTextBox" MaxHeight="240" TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Hidden" Text="{Binding RUrl}" Height="Auto" Visibility="{Binding IsVisible}" IsReadOnly="True"></TextBox>
+            </StackPanel>
+            <!-- <StackPanel Margin="10 0 10 10"> -->
+            <!--      -->
+            <!-- </StackPanel> -->
+        </StackPanel>
+    </Grid>
+</Window>
